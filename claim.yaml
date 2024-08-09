@@ -1,7 +1,7 @@
 apiVersion: azure.platform.io/v1alpha1
-kind: xAksClaim
+kind: Environment
 metadata:
-  name: aera
+  name: aks-aera-assessment
 spec:
   instance_type: "Standard_DS3_v2"
   count: 1
