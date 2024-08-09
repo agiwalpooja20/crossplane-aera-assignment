@@ -31,6 +31,5 @@ spec:
               subnet_cidr:
                 type: string
   claimNames:
-    kind: xAksClaim
-    plural: xaksclaims
-
+    kind: Environment
+    plural: environments
