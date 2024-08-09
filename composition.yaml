@@ -1,0 +1,156 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xaks-composition
+spec:
+  resources:
+    - name: resourcegroup
+      base:
+        apiVersion: azure.upbound.io/v1beta1
+        kind: ResourceGroup
+        metadata:
+          name: rg-infracloud
+        spec:
+          forProvider:
+            tags:
+              provisioner: crossplane
+      patches:
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.location"
+        toFieldPath: "spec.forProvider.location"
+
+    - name: aks-cluster
+      base:
+        apiVersion: containerservice.azure.upbound.io/v1beta1
+        kind: KubernetesCluster
+        metadata:
+          labels:
+            testing.upbound.io/cluster-name: aks
+          name: aks
+        spec:
+          forProvider:
+            defaultNodePool:
+              - name: default
+                nodeCount: 1
+                vmSize: Standard_D2_v2
+            dnsPrefix: aks1
+            identity:
+              - type: SystemAssigned
+            resourceGroupNameSelector:
+              matchControllerRef: true
+            tags:
+              Environment: Production
+          writeConnectionSecretToRef:
+            namespace: crossplane-system
+      patches:
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.location"
+        toFieldPath: "spec.forProvider.location"
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.instance_type"
+        toFieldPath: "spec.forProvider.defaultNodePool[0].vmSize"
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.count"
+        toFieldPath: "spec.forProvider.defaultNodePool[0].nodeCount"
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.writeConnectionSecretToRef.namespace"
+        toFieldPath: "spec.writeConnectionSecretToRef.namespace"
+      - type: FromCompositeFieldPath
+        fromFieldPath: "metadata.uid"
+        toFieldPath: "spec.writeConnectionSecretToRef.name"
+        transforms:
+          - type: string
+            string:
+              fmt: "%s-akscluster"
+      connectionDetails:
+        - fromConnectionSecretKey: kubeconfig
+          name: kubeconfig
+          type: FromConnectionSecretKey
+
+    - name: helm-provider
+      base:
+        apiVersion: helm.crossplane.io/v1beta1
+        kind: ProviderConfig
+        metadata:
+          name: helm-provider
+        spec:
+          credentials:
+            source: Secret
+            secretRef:
+              namespace: crossplane-system
+              key: kubeconfig       
+      patches:
+      - fromFieldPath: metadata.name
+        toFieldPath: metadata.name
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.writeConnectionSecretToRef.namespace"
+        toFieldPath: "spec.credentials.secretRef.namespace"
+      - type: FromCompositeFieldPath
+        fromFieldPath: "metadata.uid"
+        toFieldPath: "spec.credentials.secretRef.name"
+        transforms:
+          - type: string
+            string:
+              fmt: "%s-akscluster"
+      readinessChecks:
+        - type: None
+
+    - name: virtual-network
+      base:
+        apiVersion: network.azure.upbound.io/v1beta1
+        kind: VirtualNetwork
+        metadata:
+          name: crossplane-network
+        spec:
+          forProvider:
+            resourceGroupNameSelector:
+              matchControllerRef: true
+      patches:
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.location"
+        toFieldPath: "spec.forProvider.location"
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.vnet_cidr"
+        toFieldPath: "spec.forProvider.addressSpace[0]"      
+
+    - name: subnet
+      base:
+        apiVersion: network.azure.upbound.io/v1beta1
+        kind: Subnet
+        metadata:
+          name: crossplane-subnet
+        spec:
+          forProvider:
+            resourceGroupNameSelector:
+              matchControllerRef: true
+            virtualNetworkNameSelector:
+              matchControllerRef: true
+      patches:
+      - type: FromCompositeFieldPath
+        fromFieldPath: "spec.subnet_cidr"
+        toFieldPath: "spec.forProvider.addressPrefixes[0]"     
+        
+    - name: nginx
+      base:
+        apiVersion: helm.crossplane.io/v1beta1
+        kind: Release
+        metadata:
+          name: nginx-release
+        spec:
+          forProvider:
+            chart:
+              name: nginx
+              repository: "https://charts.bitnami.com/bitnami"
+              version: "13.0.0"  
+            namespace: default
+            values:
+              service:
+                type: LoadBalancer
+          providerConfigRef:
+            name: helm-provider
+      patches:
+      - fromFieldPath: metadata.name
+        toFieldPath: spec.providerConfigRef.name
+  compositeTypeRef:
+    apiVersion: azure.platform.io/v1alpha1
+    kind: xAks

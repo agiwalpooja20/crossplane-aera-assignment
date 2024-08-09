@@ -1,0 +1,10 @@
+apiVersion: azure.platform.io/v1alpha1
+kind: xAksClaim
+metadata:
+  name: aera
+spec:
+  instance_type: "Standard_DS3_v2"
+  count: 1
+  location: "East US"
+  vnet_cidr: "10.2.0.0/16"
+  subnet_cidr: "10.2.0.0/24"
