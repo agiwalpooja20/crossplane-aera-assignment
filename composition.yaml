@@ -1,7 +1,7 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: xaks-composition
+  name: xaks.azure.platform.io
 spec:
   resources:
     - name: resourcegroup
@@ -9,7 +9,7 @@ spec:
         apiVersion: azure.upbound.io/v1beta1
         kind: ResourceGroup
         metadata:
-          name: rg-infracloud
+          name: rg-aks-aera-assessment
         spec:
           forProvider:
             tags:
@@ -25,21 +25,21 @@ spec:
         kind: KubernetesCluster
         metadata:
           labels:
-            testing.upbound.io/cluster-name: aks
-          name: aks
+            demo.azure.platform.io/cluster-name: aks-aera-assessment
+          name: aks-aera-assessment
         spec:
           forProvider:
             defaultNodePool:
               - name: default
                 nodeCount: 1
                 vmSize: Standard_D2_v2
-            dnsPrefix: aks1
+            dnsPrefix: aks-aera-assessment
             identity:
               - type: SystemAssigned
             resourceGroupNameSelector:
               matchControllerRef: true
             tags:
-              Environment: Production
+              provisioner: Crossplane
           writeConnectionSecretToRef:
             namespace: crossplane-system
       patches:
@@ -100,7 +100,7 @@ spec:
         apiVersion: network.azure.upbound.io/v1beta1
         kind: VirtualNetwork
         metadata:
-          name: crossplane-network
+          name: aera-assessment-network
         spec:
           forProvider:
             resourceGroupNameSelector:
@@ -118,7 +118,7 @@ spec:
         apiVersion: network.azure.upbound.io/v1beta1
         kind: Subnet
         metadata:
-          name: crossplane-subnet
+          name: aera-assessment-subnet
         spec:
           forProvider:
             resourceGroupNameSelector:
