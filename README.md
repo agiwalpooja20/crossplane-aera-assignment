@@ -8,6 +8,7 @@ It contains 3 files
 1. Claim.yaml
 2. Composition.yaml
 3. Definition.yaml
+
 Apply all these files to create the resources required for fully managed AKS cluster along with required networking resources.
 
 ```
@@ -19,6 +20,6 @@ kubectl apply -f claim.yaml
 Verify the resources
 ```
 kubectl get xaks
-NAME         SYNCED   READY   COMPOSITION   AGE
-aera-<>      True     True    composition   48m
+NAME         SYNCED   READY   COMPOSITION        AGE
+aera-4fv2z   True     True    xaks-composition   44m
 ```
